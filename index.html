@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pokédex Nacional</title>
+  <meta name="description" content="Busca cualquier Pokémon por nombre o número, filtra por tipo y compara sus estadísticas base.">
+  <meta name="theme-color" content="#0b0c0f">
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://pokeapi.co">
+  <link rel="preconnect" href="https://raw.githubusercontent.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#explorar">Saltar al explorador</a>
+
+  <header class="nav">
+    <a class="brand" href="#top" aria-label="Pokédex, inicio">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Pokédex</span>
+    </a>
+    <nav class="nav-links" aria-label="Principal">
+      <a href="#explorar">Explorar</a>
+      <a href="#comparar">Comparar</a>
+    </nav>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Cambiar a tema claro">
+      <i class="ph ph-sun" aria-hidden="true"></i>
+    </button>
+  </header>
+
+  <main id="top">
+    <section class="hero is-swapping" id="hero" aria-labelledby="heroTitle">
+      <div class="hero-copy">
+        <h1 id="heroTitle" class="rise">Cada Pokémon, de cerca.</h1>
+        <p class="rise" style="--d:1">Busca por nombre o número, filtra por tipo y compara estadísticas base. Datos en vivo de PokéAPI.</p>
+        <div class="hero-cta rise" style="--d:2">
+          <a class="btn btn-primary" href="#explorar">Explorar <i class="ph-bold ph-arrow-down-right" aria-hidden="true"></i></a>
+          <button class="btn btn-ghost" id="randomBtn" type="button"><i class="ph-bold ph-shuffle" aria-hidden="true"></i> Al azar</button>
+        </div>
+      </div>
+
+      <figure class="hero-stage rise" id="heroStage" style="--d:1" aria-live="polite" aria-busy="true">
+        <span class="hero-num" id="heroNum" aria-hidden="true">0000</span>
+        <span class="hero-glow" aria-hidden="true"></span>
+        <div class="hero-art">
+          <div class="hero-float"><img id="heroImg" alt="" width="475" height="475" fetchpriority="high"></div>
+        </div>
+        <span class="hero-floor" aria-hidden="true"></span>
+        <figcaption class="hero-meta">
+          <div class="hero-id">
+            <span class="mono dim" id="heroDex">N.º ----</span>
+            <h2 id="heroName">Cargando</h2>
+            <p id="heroGenus">&nbsp;</p>
+          </div>
+          <ul class="types" id="heroTypes"></ul>
+          <dl class="hero-stats" id="heroStats"></dl>
+          <button class="link-btn" id="heroMore" type="button" disabled>Ver ficha <i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="section explorer" id="explorar" aria-labelledby="explorarTitle">
+      <h2 class="title" id="explorarTitle">Explora la Pokédex</h2>
+
+      <div class="controls">
+        <div class="field field--search">
+          <label for="search">Buscar</label>
+          <div class="input-wrap">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input class="input" id="search" type="search" placeholder="Pikachu o 25" autocomplete="off" spellcheck="false" aria-describedby="searchHelp">
+          </div>
+          <p class="help" id="searchHelp">Pulsa / para buscar desde cualquier parte.</p>
+        </div>
+        <div class="field">
+          <label for="sort">Orden</label>
+          <div class="input-wrap input-wrap--select">
+            <select class="input input--select" id="sort">
+              <option value="id">Número</option>
+              <option value="az">Nombre, A a Z</option>
+              <option value="za">Nombre, Z a A</option>
+            </select>
+            <i class="ph ph-caret-down" aria-hidden="true"></i>
+          </div>
+          <p class="help">&nbsp;</p>
+        </div>
+        <p class="count mono" id="count" aria-live="polite">Cargando</p>
+      </div>
+
+      <div class="type-filter" id="typeFilter" role="group" aria-label="Filtrar por tipo"></div>
+
+      <ol class="grid" id="grid" aria-label="Resultados"></ol>
+      <div class="state" id="gridState" hidden></div>
+
+      <div class="more">
+        <button class="btn btn-ghost" id="loadMore" type="button" hidden><i class="ph-bold ph-plus" aria-hidden="true"></i> Cargar más</button>
+      </div>
+    </section>
+
+    <section class="section compare" id="comparar" aria-labelledby="cmpTitle">
+      <h2 class="title" id="cmpTitle">Frente a frente</h2>
+      <p class="lead">Elige dos Pokémon y mira quién gana en cada estadística base.</p>
+
+      <div class="versus">
+        <div class="fighter" data-side="a">
+          <div class="field">
+            <label for="cmpA">Primer Pokémon</label>
+            <input class="input input--plain" id="cmpA" list="pokeList" autocomplete="off" spellcheck="false" aria-describedby="cmpAErr">
+            <p class="field-error" id="cmpAErr" hidden>No encontramos ese Pokémon.</p>
+          </div>
+          <div class="fighter-art"><img alt="" width="475" height="475"></div>
+          <h3 class="fighter-name">&nbsp;</h3>
+          <ul class="types"></ul>
+        </div>
+
+        <div class="vs-stats" id="vsStats" aria-live="polite"></div>
+
+        <div class="fighter" data-side="b">
+          <div class="field">
+            <label for="cmpB">Segundo Pokémon</label>
+            <input class="input input--plain" id="cmpB" list="pokeList" autocomplete="off" spellcheck="false" aria-describedby="cmpBErr">
+            <p class="field-error" id="cmpBErr" hidden>No encontramos ese Pokémon.</p>
+          </div>
+          <div class="fighter-art"><img alt="" width="475" height="475"></div>
+          <h3 class="fighter-name">&nbsp;</h3>
+          <ul class="types"></ul>
+        </div>
+      </div>
+      <datalist id="pokeList"></datalist>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a class="brand" href="#top" aria-label="Volver arriba">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Pokédex</span>
+    </a>
+    <p>Proyecto de fans sin fines comerciales. Datos e ilustraciones vía <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>. Pokémon es marca de Nintendo, Creatures y Game Freak.</p>
+  </footer>
+
+  <dialog class="sheet" id="sheet" aria-labelledby="sheetName">
+    <button class="icon-btn sheet-close" id="sheetClose" type="button" aria-label="Cerrar ficha">
+      <i class="ph ph-x" aria-hidden="true"></i>
+    </button>
+    <div class="sheet-body" id="sheetBody"></div>
+  </dialog>
+</body>
+</html>
